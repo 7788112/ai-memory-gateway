@@ -1267,7 +1267,7 @@ async def dashboard_page(request: Request):
     if not MEMORY_ENABLED:
         return HTMLResponse("<h3>记忆系统未启用（设置 MEMORY_ENABLED=true 开启）</h3>")
     
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return templates.TemplateResponse(request, "dashboard.html")
 
 
 
@@ -2112,6 +2112,20 @@ async def api_rename_thread(request: Request):
             PARTITION_SESSION_ID = new_id
             await set_gateway_config("partition_session_id", new_id)
         return {"status": "ok", "old_id": old_id, "new_id": new_id}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.delete("/api/partition/thread/{session_id:path}")
+async def api_delete_thread(session_id: str):
+    """删除对话线（不允许删除当前活跃线）"""
+    try:
+        active_sid = get_active_session_id()
+        if session_id == active_sid:
+            return {"error": "不能删除当前活跃的对话线"}
+        await delete_session_cache_state(session_id)
+        print(f"🗑️ 删除对话线: {session_id}")
+        return {"status": "ok", "session_id": session_id}
     except Exception as e:
         return {"error": str(e)}
 
